@@ -30,6 +30,7 @@ Opciones habituales: GitHub Pages, Cloudflare Pages o Netlify en sus planes grat
 ## Importante
 - El modo offline funciona después de la primera carga online.
 - La biblioteca se guarda por navegador/dispositivo; no se sincroniza automáticamente.
+- Actualización de publicación CT LAB.
 - No hay funciones de IA generativa integradas: CT AI Design queda como futura ampliación local o con proveedor opcional.
 - El armado DTF de esta versión coloca diseños en flujo simple; no realiza nesting industrial optimizado ni genera perfiles ICC.
 - La exportación de hoja usa 118,11 px/cm (300 DPI nominales). Verificar dimensiones, perfil de color y requisitos del RIP/proveedor antes de imprimir.
