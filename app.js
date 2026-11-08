@@ -57,8 +57,16 @@ function renderHT(){
  try{
   const c=$('#ht-canvas'),ctx=c.getContext('2d',{willReadFrequently:true});
   if(!ctx)throw new Error('No se pudo crear el canvas');
-  const max=1600,scale=Math.min(1,max/Math.max(currentImage.naturalWidth,currentImage.naturalHeight));
-  c.width=Math.max(1,Math.round(currentImage.naturalWidth*scale));c.height=Math.max(1,Math.round(currentImage.naturalHeight*scale));
+  // Print sizing is applied BEFORE background keying and halftone generation.
+  const dpi=+($('#ht-dpi')?.value||300),cmW=Math.max(1,+($('#ht-width-cm')?.value||30));
+  const ratio=currentImage.naturalHeight/currentImage.naturalWidth;
+  const cmH=$('#ht-lock-ratio')?.checked?cmW*ratio:Math.max(1,+($('#ht-height-cm')?.value||cmW*ratio));
+  let targetW=Math.round(cmW/2.54*dpi),targetH=Math.round(cmH/2.54*dpi);
+  const maxPixels=30000000,requested=targetW*targetH,capScale=requested>maxPixels?Math.sqrt(maxPixels/requested):1;
+  targetW=Math.max(1,Math.round(targetW*capScale));targetH=Math.max(1,Math.round(targetH*capScale));
+  c.width=targetW;c.height=targetH;
+  const actualDpi=Math.round(dpi*capScale);
+  const info=$('#ht-pixel-info');if(info)info.textContent=`Salida: ${targetW} × ${targetH} px · ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm · ${actualDpi} DPI efectivos${capScale<1?' (reducido para proteger la memoria del navegador)':''}`;
   const tmp=document.createElement('canvas');tmp.width=c.width;tmp.height=c.height;
   const t=tmp.getContext('2d',{willReadFrequently:true});t.drawImage(currentImage,0,0,c.width,c.height);
   const src=t.getImageData(0,0,c.width,c.height),out=ctx.createImageData(c.width,c.height),mode=htToolMode;
@@ -103,8 +111,16 @@ function renderHT(){
   }else{
    for(let i=0;i<src.data.length;i+=4){let lum=.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2];lum=Math.max(0,Math.min(255,factor*(lum-128)+128+bright*2.55));let r=lum,g=lum,b=lum,a=src.data[i+3];if(mode==='threshold'){const v=lum>=threshold?255:0;if(transparent&&v===255)a=0;r=g=b=v}else if(mode==='posterize'){const v=Math.round(lum/64)*64;r=g=b=v}else if(mode==='original'){r=src.data[i];g=src.data[i+1];b=src.data[i+2]}out.data[i]=r;out.data[i+1]=g;out.data[i+2]=b;out.data[i+3]=a}
   }
+  // Garment knockout: dark ink is made transparent so a black garment supplies the black.
+  if($('#ht-garment-knockout')?.checked){
+   const blackTol=+$('#ht-black-tol').value;
+   for(let i=0;i<out.data.length;i+=4){const darkness=Math.max(out.data[i],out.data[i+1],out.data[i+2]);if(darkness<=blackTol)out.data[i+3]=0;}
+  }
+  // Final alpha cleanup is deliberately LAST: after resize, keying and halftone.
+  if($('#ht-clean-alpha')?.checked){const cut=+$('#ht-alpha-cut').value*255/100;for(let i=3;i<out.data.length;i+=4){if(out.data[i]<cut)out.data[i]=0;else out.data[i]=255;}}
   ctx.clearRect(0,0,c.width,c.height);ctx.putImageData(out,0,0);lastHT=c;$('#ht-empty').classList.add('hidden');c.classList.remove('hidden');
   if($('#ht-tol-v'))$('#ht-tol-v').textContent=tol;if($('#ht-soft-v'))$('#ht-soft-v').textContent=soft;
+  if($('#ht-alpha-v'))$('#ht-alpha-v').textContent=$('#ht-alpha-cut').value;if($('#ht-black-v'))$('#ht-black-v').textContent=$('#ht-black-tol').value;
  }catch(err){console.error('CT LAB Halftone render error',err);toast('No se pudo procesar esta imagen. Probá con PNG o JPG.')}
 }
 function hexRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16))}
@@ -142,3 +158,6 @@ function renderMockup(){const c=$('#mk-canvas'),ctx=c.getContext('2d'),color=$('
  $('#ht-canvas')?.addEventListener('click',e=>{if(!htPicking||!currentImage)return;const r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(currentImage.naturalWidth-1,Math.floor((e.clientX-r.left)/r.width*currentImage.naturalWidth))),y=Math.max(0,Math.min(currentImage.naturalHeight-1,Math.floor((e.clientY-r.top)/r.height*currentImage.naturalHeight)));const sample=document.createElement('canvas');sample.width=sample.height=1;const sx=sample.getContext('2d',{willReadFrequently:true});sx.drawImage(currentImage,x,y,1,1,0,0,1,1);const d=sx.getImageData(0,0,1,1).data,hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');$('#ht-key-color').value=hex;$('#ht-key-label').textContent=hex.toUpperCase();htPicking=false;$('#ht-picker').textContent='⌖ Elegir otro color';$('#ht-picker').classList.remove('primary');$('#ht-canvas').style.cursor='default';renderHT()});
  $('#ht-key-color')?.addEventListener('input',renderHT);$('#ht-apply-remove')?.addEventListener('click',()=>{setHTMode(htToolMode==='keyhalftone'?'keyhalftone':'remove');toast(htToolMode==='keyhalftone'?'Fondo eliminado y semitono aplicado':'Eliminación de fondo aplicada')});
  setHTMode('color');
+
+// CT LAB PRO v2.4 — print sizing, alpha cleanup and garment color integration
+;['ht-width-cm','ht-height-cm','ht-dpi','ht-lock-ratio','ht-clean-alpha','ht-alpha-cut','ht-garment-knockout','ht-black-tol'].forEach(id=>{const el=$('#'+id);if(!el)return;el.addEventListener('input',()=>{if(id==='ht-width-cm'&&$('#ht-lock-ratio').checked&&currentImage){$('#ht-height-cm').value=(+el.value*currentImage.naturalHeight/currentImage.naturalWidth).toFixed(1)}renderHT()});el.addEventListener('change',renderHT)});

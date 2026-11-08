@@ -1,8 +1,12 @@
-# CT LAB PRO v2.1 — CUATRO TRAZOS
+# CT LAB PRO v2.4 — CUATRO TRAZOS
 
 PWA de procesamiento gráfico local. Reemplaza los archivos del repositorio por los de esta carpeta en la raíz de la rama `principal`.
 
 ## Incluye
+- Preparación de impresión en Halftone Pro: ancho/alto en cm, proporción bloqueada, selección de DPI (150/200/300/360) y cálculo de píxeles/DPI efectivos. Límite de seguridad de 30 MP para proteger la memoria del navegador.
+- Orden de acabado: redimensionado y remuestreo → eliminación de fondo → semitono → integración con prenda (knockout de tinta negra opcional) → limpieza final de semitransparencias.
+- Integración con prenda negra: vuelve transparentes los píxeles de tinta suficientemente oscuros para que la tela negra complete esas zonas. Ajustable por tolerancia; revisar textos y detalles negros porque también pueden desaparecer.
+- Limpieza de alpha opcional: elimina semitransparencias por debajo del umbral y vuelve opacos los píxeles restantes. Puede endurecer bordes finos; revisar antes de imprimir.
 - Biblioteca local IndexedDB (misma base `ctlab-db`, almacén `assets`, para conservar diseños ya guardados en el mismo navegador/origen).
 - Halftone Pro v2.1: semitono a color preservando tonos locales; eliminación de fondo con cuentagotas sobre la imagen original, tolerancia y borde suave; semitono monocromático con tinta blanca o negra; ajustes de frecuencia, contraste y brillo; exportación PNG.
 - Transparency Lab: eliminación de fondo por color/tolerancia e inversión de selección, exportación PNG con alpha.
