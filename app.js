@@ -1,5 +1,5 @@
 const $ = s => document.querySelector(s);
-let currentImage = null, currentName = "diseño", lastHT = null, installPrompt = null;
+let currentImage = null, currentName = "diseño", lastHT = null, installPrompt = null, htToolMode = "color", htPicking = false, htInk = "#ffffff";
 const DB_NAME="ctlab-db", STORE="assets";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.remove("hidden");setTimeout(()=>t.classList.add("hidden"),2600)}
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));$("#"+page).classList.add("active");document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));$("#crumb").textContent=({home:"Inicio",library:"Biblioteca",halftone:"Halftone Studio",dtf:"DTF Studio",export:"Exportaciones",settings:"Ajustes"})[page];if(page==="dtf"){renderDTFAssets();renderDTF()}if(page==="library")renderLibrary()}
@@ -51,51 +51,25 @@ function setupRange(id,out){$("#"+id).addEventListener("input",()=>{ $("#"+out).
 ["ht-cell","ht-contrast","ht-bright","ht-threshold"].forEach((id,i)=>setupRange(id,["v-cell","v-contrast","v-bright","v-threshold"][i]));
 ["ht-mode","ht-color","ht-transparent"].forEach(id=>$("#"+id).addEventListener("change",renderHT));
 function resetHT(){ $("#ht-mode").value="halftone";$("#ht-cell").value=8;$("#ht-contrast").value=35;$("#ht-bright").value=0;$("#ht-threshold").value=128;$("#ht-color").value="#111111";$("#ht-transparent").checked=true;["v-cell","v-contrast","v-bright","v-threshold"].forEach((x,i)=>$("#"+x).textContent=[8,35,0,128][i]);renderHT()}
+function setHTMode(mode){htToolMode=mode;htPicking=false;const picker=$('#ht-picker');if(picker){picker.textContent='⌖ Elegir color en imagen';picker.classList.remove('primary')}$('#ht-remove-panel').style.display=mode==='remove'?'block':'none';$('#ht-mono-panel').style.display=mode==='mono'?'block':'none';document.querySelectorAll('[data-ht-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.htMode===mode));$('#ht-ink-control').style.display=mode==='mono'?'none':'grid';renderHT()}
 function renderHT(){
  if(!currentImage)return;
  try{
- const c=$("#ht-canvas"),ctx=c.getContext("2d",{willReadFrequently:true});
- if(!ctx)throw new Error("El navegador no pudo crear el canvas");
- const max=1400,scale=Math.min(1,max/Math.max(currentImage.width,currentImage.height));
- c.width=Math.round(currentImage.width*scale);c.height=Math.round(currentImage.height*scale);
- const tmp=document.createElement("canvas");tmp.width=c.width;tmp.height=c.height;
- const t=tmp.getContext("2d",{willReadFrequently:true});t.drawImage(currentImage,0,0,c.width,c.height);
- const src=t.getImageData(0,0,c.width,c.height),out=ctx.createImageData(c.width,c.height);
- const mode=$("#ht-mode").value,contrast=+$("#ht-contrast").value,bright=+$("#ht-bright").value;
- const threshold=+$("#ht-threshold").value,cell=+$("#ht-cell").value,color=hexRGB($("#ht-color").value);
- const transparent=$("#ht-transparent").checked,factor=(259*(contrast+255))/(255*(259-contrast));
- if(mode==="halftone"){
+ const c=$('#ht-canvas'),ctx=c.getContext('2d',{willReadFrequently:true});if(!ctx)throw new Error('No se pudo crear el canvas');
+ const max=1600,scale=Math.min(1,max/Math.max(currentImage.naturalWidth,currentImage.naturalHeight));c.width=Math.max(1,Math.round(currentImage.naturalWidth*scale));c.height=Math.max(1,Math.round(currentImage.naturalHeight*scale));
+ const tmp=document.createElement('canvas');tmp.width=c.width;tmp.height=c.height;const t=tmp.getContext('2d',{willReadFrequently:true});t.drawImage(currentImage,0,0,c.width,c.height);
+ const src=t.getImageData(0,0,c.width,c.height),out=ctx.createImageData(c.width,c.height),mode=htToolMode,contrast=+$('#ht-contrast').value,bright=+$('#ht-bright').value,threshold=+$('#ht-threshold').value,cell=+$('#ht-cell').value,transparent=$('#ht-transparent').checked,factor=(259*(contrast+255))/(255*(259-contrast));
+ const key=hexRGB($('#ht-key-color')?.value||'#000000'),tol=+($('#ht-tol')?.value||35),soft=+($('#ht-soft')?.value||12),ink=hexRGB(htInk);
+ if(mode==='remove'){
+  for(let i=0;i<src.data.length;i+=4){const d=Math.hypot(src.data[i]-key[0],src.data[i+1]-key[1],src.data[i+2]-key[2]),edge=Math.max(0,Math.min(1,(d-tol)/Math.max(1,soft)));out.data[i]=src.data[i];out.data[i+1]=src.data[i+1];out.data[i+2]=src.data[i+2];out.data[i+3]=Math.round(src.data[i+3]*edge)}
+ }else if(mode==='color'||mode==='mono'){
   out.data.fill(0);
-  for(let y=0;y<c.height;y+=cell){
-   for(let x=0;x<c.width;x+=cell){
-    let sum=0,n=0;
-    for(let yy=y;yy<Math.min(y+cell,c.height);yy++){
-     for(let xx=x;xx<Math.min(x+cell,c.width);xx++){
-      const i=(yy*c.width+xx)*4;sum+=.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2];n++;
-     }
-    }
-    let lum=sum/n;lum=factor*(lum-128)+128+bright*2.55;
-    const r=(1-Math.max(0,Math.min(255,lum))/255)*(cell*.68),cx=x+cell/2,cy=y+cell/2;
-    for(let yy=Math.max(0,Math.floor(cy-r));yy<Math.min(c.height,Math.ceil(cy+r));yy++){
-     for(let xx=Math.max(0,Math.floor(cx-r));xx<Math.min(c.width,Math.ceil(cx+r));xx++){
-      if((xx-cx)**2+(yy-cy)**2<=r*r){const i=(yy*c.width+xx)*4;out.data[i]=color[0];out.data[i+1]=color[1];out.data[i+2]=color[2];out.data[i+3]=255;}
-     }
-    }
-   }
-  }
+  for(let y=0;y<c.height;y+=cell)for(let x=0;x<c.width;x+=cell){let rr=0,gg=0,bb=0,ll=0,aa=0,n=0;for(let yy=y;yy<Math.min(y+cell,c.height);yy++)for(let xx=x;xx<Math.min(x+cell,c.width);xx++){const i=(yy*c.width+xx)*4,a=src.data[i+3]/255;rr+=src.data[i]*a;gg+=src.data[i+1]*a;bb+=src.data[i+2]*a;ll+=(.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2])*a;aa+=a;n++}if(!n)continue;rr/=Math.max(aa,.0001);gg/=Math.max(aa,.0001);bb/=Math.max(aa,.0001);let lum=mode==='mono'?ll/Math.max(aa,.0001):.299*rr+.587*gg+.114*bb;lum=Math.max(0,Math.min(255,factor*(lum-128)+128+bright*2.55));if(transparent&&lum>247)continue;const radius=(1-lum/255)*(cell*.70),cx=x+cell/2,cy=y+cell/2;if(radius<.35)continue;const col=mode==='mono'?ink:[Math.round(rr),Math.round(gg),Math.round(bb)];for(let yy=Math.max(0,Math.floor(cy-radius));yy<Math.min(c.height,Math.ceil(cy+radius));yy++)for(let xx=Math.max(0,Math.floor(cx-radius));xx<Math.min(c.width,Math.ceil(cx+radius));xx++)if((xx-cx)**2+(yy-cy)**2<=radius*radius){const i=(yy*c.width+xx)*4;out.data[i]=col[0];out.data[i+1]=col[1];out.data[i+2]=col[2];out.data[i+3]=Math.round(255*Math.min(1,aa/n))}}
  }else{
-  for(let i=0;i<src.data.length;i+=4){
-   let lum=.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2];
-   lum=factor*(lum-128)+128+bright*2.55;lum=Math.max(0,Math.min(255,lum));
-   let r=lum,g=lum,b=lum,a=src.data[i+3];
-   if(mode==="threshold"){const v=lum>=threshold?255:0;if(transparent&&v===255)a=0;r=g=b=v;}
-   else if(mode==="posterize"){const v=Math.round(lum/64)*64;r=g=b=v;}
-   else if(mode==="original"){r=src.data[i];g=src.data[i+1];b=src.data[i+2];}
-   out.data[i]=r;out.data[i+1]=g;out.data[i+2]=b;out.data[i+3]=a;
-  }
+  for(let i=0;i<src.data.length;i+=4){let lum=.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2];lum=Math.max(0,Math.min(255,factor*(lum-128)+128+bright*2.55));let r=lum,g=lum,b=lum,a=src.data[i+3];if(mode==='threshold'){const v=lum>=threshold?255:0;if(transparent&&v===255)a=0;r=g=b=v}else if(mode==='posterize'){const v=Math.round(lum/64)*64;r=g=b=v}else if(mode==='original'){r=src.data[i];g=src.data[i+1];b=src.data[i+2]}out.data[i]=r;out.data[i+1]=g;out.data[i+2]=b;out.data[i+3]=a}
  }
- ctx.clearRect(0,0,c.width,c.height);ctx.putImageData(out,0,0);lastHT=c;
- }catch(err){console.error("CT LAB Halftone render error",err);$("#ht-empty").classList.remove("hidden");$("#ht-empty").innerHTML='<b>No se pudo procesar esta imagen</b><br><small>Probá con otra imagen PNG o JPG.</small>';$("#ht-canvas").classList.add("hidden");toast("Error al generar la vista previa de Halftone")}
+ ctx.clearRect(0,0,c.width,c.height);ctx.putImageData(out,0,0);lastHT=c;$('#ht-empty').classList.add('hidden');c.classList.remove('hidden');if($('#ht-tol-v'))$('#ht-tol-v').textContent=tol;if($('#ht-soft-v'))$('#ht-soft-v').textContent=soft;
+ }catch(err){console.error('CT LAB Halftone render error',err);toast('No se pudo procesar esta imagen. Probá con PNG o JPG.')}
 }
 function hexRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16))}
 function downloadCanvas(canvas,name){canvas.toBlob(blob=>{if(!blob){toast("No se pudo exportar");return}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}, "image/png")}
@@ -123,3 +97,12 @@ function exportBasicSVG(){const src=toolSource();if(!src)return toast('Primero a
 function renderMockup(){const c=$('#mk-canvas'),ctx=c.getContext('2d'),color=$('#mk-color').value,type=$('#mk-type').value,size=+$('#mk-size').value/100,y=+$('#mk-y').value/100;ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#e8e4dc';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle=color;ctx.strokeStyle='#aaa49a';ctx.lineWidth=3;ctx.beginPath();if(type==='tshirt'){ctx.moveTo(235,150);ctx.lineTo(140,190);ctx.lineTo(75,310);ctx.lineTo(155,355);ctx.lineTo(195,290);ctx.lineTo(195,590);ctx.lineTo(505,590);ctx.lineTo(505,290);ctx.lineTo(545,355);ctx.lineTo(625,310);ctx.lineTo(560,190);ctx.lineTo(465,150);ctx.quadraticCurveTo(350,220,235,150)}else{ctx.moveTo(235,150);ctx.lineTo(140,190);ctx.lineTo(75,310);ctx.lineTo(155,355);ctx.lineTo(195,290);ctx.lineTo(195,590);ctx.lineTo(505,590);ctx.lineTo(505,290);ctx.lineTo(545,355);ctx.lineTo(625,310);ctx.lineTo(560,190);ctx.lineTo(465,150);ctx.quadraticCurveTo(350,220,235,150)}ctx.closePath();ctx.fill();ctx.stroke();if(type==='hoodie'){ctx.beginPath();ctx.arc(350,170,60,Math.PI,0);ctx.stroke();ctx.strokeRect(275,470,150,55)}if(type==='sweat'){ctx.strokeRect(195,560,310,28)}if(currentImage){const w=700*size,h=w*currentImage.naturalHeight/currentImage.naturalWidth;ctx.drawImage(currentImage,350-w/2,700*y-h/2,w,h)}$('#mk-size-v').textContent=$('#mk-size').value;$('#mk-y-v').textContent=$('#mk-y').value}
 ['tr-color','tr-tol','tr-invert'].forEach(id=>$('#'+id)?.addEventListener('input',renderTransparency));$('#tr-soft')?.addEventListener('input',renderTransparency);['en-sharp','en-noise','en-contrast','en-bright','en-scale'].forEach(id=>$('#'+id)?.addEventListener('input',renderEnhancer));['mk-type','mk-color','mk-size','mk-y'].forEach(id=>$('#'+id)?.addEventListener('input',renderMockup));
 // Halftone controls: redraw on every relevant change and keep transparent output visible on checkerboard.
+
+// CT LAB PRO v2.1 — tres flujos claros de semitono y cuentagotas real
+ document.querySelectorAll('[data-ht-mode]').forEach(b=>b.addEventListener('click',()=>setHTMode(b.dataset.htMode)));
+ document.querySelectorAll('[data-ink]').forEach(b=>b.addEventListener('click',()=>{htInk=b.dataset.ink;renderHT();document.querySelectorAll('[data-ink]').forEach(x=>x.classList.toggle('primary',x===b))}));
+ ['ht-tol','ht-soft'].forEach(id=>$('#'+id)?.addEventListener('input',renderHT));
+ $('#ht-picker')?.addEventListener('click',()=>{htPicking=true;$('#ht-picker').textContent='Ahora tocá el color del fondo';$('#ht-picker').classList.add('primary');$('#ht-canvas').style.cursor='crosshair'});
+ $('#ht-canvas')?.addEventListener('click',e=>{if(!htPicking||!currentImage)return;const r=e.currentTarget.getBoundingClientRect(),x=Math.max(0,Math.min(currentImage.naturalWidth-1,Math.floor((e.clientX-r.left)/r.width*currentImage.naturalWidth))),y=Math.max(0,Math.min(currentImage.naturalHeight-1,Math.floor((e.clientY-r.top)/r.height*currentImage.naturalHeight)));const sample=document.createElement('canvas');sample.width=sample.height=1;const sx=sample.getContext('2d',{willReadFrequently:true});sx.drawImage(currentImage,x,y,1,1,0,0,1,1);const d=sx.getImageData(0,0,1,1).data,hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');$('#ht-key-color').value=hex;$('#ht-key-label').textContent=hex.toUpperCase();htPicking=false;$('#ht-picker').textContent='⌖ Elegir otro color';$('#ht-picker').classList.remove('primary');$('#ht-canvas').style.cursor='default';renderHT()});
+ $('#ht-key-color')?.addEventListener('input',renderHT);$('#ht-apply-remove')?.addEventListener('click',()=>{setHTMode('remove');toast('Eliminación de fondo aplicada')});
+ setHTMode('color');
