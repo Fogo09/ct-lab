@@ -35,3 +35,10 @@ Subir y reemplazar los seis archivos `index.html`, `app.js`, `sw.js`, `manifest.
 - Conserva los canales RGB originales del personaje.
 - No elimina automáticamente las zonas blancas del sujeto.
 - Mantiene detalles oscuros internos al limitar la eliminación al fondo conectado con los bordes.
+
+
+## CT LAB PRO v2.5
+- Halftone Pro mantiene fija la mesa de trabajo en pantallas de escritorio; el panel de parámetros tiene su propio desplazamiento vertical.
+- En pantallas pequeñas, el diseño vuelve a flujo vertical para conservar usabilidad.
+- Se puede elegir un color sólido para el fondo de vista previa o volver al patrón cuadriculado.
+- El color de vista previa se aplica únicamente al contenedor visual: no forma parte del canvas ni del PNG exportado.

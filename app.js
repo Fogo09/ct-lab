@@ -161,3 +161,17 @@ function renderMockup(){const c=$('#mk-canvas'),ctx=c.getContext('2d'),color=$('
 
 // CT LAB PRO v2.4 — print sizing, alpha cleanup and garment color integration
 ;['ht-width-cm','ht-height-cm','ht-dpi','ht-lock-ratio','ht-clean-alpha','ht-alpha-cut','ht-garment-knockout','ht-black-tol'].forEach(id=>{const el=$('#'+id);if(!el)return;el.addEventListener('input',()=>{if(id==='ht-width-cm'&&$('#ht-lock-ratio').checked&&currentImage){$('#ht-height-cm').value=(+el.value*currentImage.naturalHeight/currentImage.naturalWidth).toFixed(1)}renderHT()});el.addEventListener('change',renderHT)});
+
+
+// CT LAB PRO v2.5 — fixed Halftone workbench and preview-only background color
+(function(){
+ const wrap=document.getElementById('ht-canvas-wrap');
+ const picker=document.getElementById('ht-preview-bg');
+ const checker=document.getElementById('ht-preview-checker');
+ if(!wrap||!picker||!checker)return;
+ const checkerStyle='linear-gradient(45deg,#d9d8d2 25%,transparent 25%),linear-gradient(-45deg,#d9d8d2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9d8d2 75%),linear-gradient(-45deg,transparent 75%,#d9d8d2 75%)';
+ function setPreviewColor(color){wrap.style.backgroundImage='none';wrap.style.backgroundColor=color;picker.value=color;checker.classList.remove('primary');}
+ picker.addEventListener('input',()=>setPreviewColor(picker.value));
+ checker.addEventListener('click',()=>{wrap.style.backgroundColor='#f1f0eb';wrap.style.backgroundImage=checkerStyle;checker.classList.add('primary');});
+ setPreviewColor('#777777');
+})();
