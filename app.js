@@ -5,14 +5,33 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.remove("hi
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));$("#"+page).classList.add("active");document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));$("#crumb").textContent=({home:"Inicio",library:"Biblioteca",halftone:"Halftone Studio",dtf:"DTF Studio",export:"Exportaciones",settings:"Ajustes"})[page];if(page==="dtf"){renderDTFAssets();renderDTF()}if(page==="library")renderLibrary()}
 document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 function openFile(){$("#file-input").click()}
-$("#file-input").addEventListener("change",async e=>{for(const f of e.target.files){try{const data=await fileToDataURL(f);await addAsset({name:f.name,type:f.type,data,created:Date.now()});loadDataURL(data,f.name); }catch(err){toast("No se pudo abrir "+f.name)}}e.target.value="";renderLibrary();updateStats();go("halftone")});
-function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+$("#file-input").addEventListener("change",async e=>{
+ const files=[...e.target.files];
+ if(!files.length)return;
+ let opened=0, saved=0;
+ for(const f of files){
+  try{
+   if(!/^image\/(png|jpeg|webp|svg\+xml)$/.test(f.type) && !/\.(png|jpe?g|webp|svg)$/i.test(f.name)){
+    toast("Formato no compatible: "+f.name);continue;
+   }
+   const data=await fileToDataURL(f);
+   // La vista previa no depende de IndexedDB: primero abrir, después intentar guardar.
+   await loadDataURL(data,f.name);opened++;
+   try{await addAsset({name:f.name,type:f.type||"image/*",data,created:Date.now()});saved++;}
+   catch(storageError){console.warn("CT LAB: no se pudo guardar en biblioteca",storageError);toast("Imagen abierta. No se pudo guardar en Biblioteca.");}
+  }catch(err){console.error("CT LAB: error al importar imagen",f.name,err);toast("No se pudo mostrar "+f.name+". Probá con PNG o JPG.");}
+ }
+ e.target.value="";
+ try{await renderLibrary();await updateStats();}catch(err){console.warn("CT LAB: biblioteca local no disponible",err);}
+ if(opened){go("halftone");if(saved===opened)toast(opened===1?"Imagen cargada y guardada en Biblioteca":"Imágenes cargadas y guardadas en Biblioteca");}
+});
+function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error||new Error("No se pudo leer el archivo"));r.onabort=()=>rej(new Error("Lectura cancelada"));r.readAsDataURL(file)})}
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function addAsset(a){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).add(a);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function getAssets(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function deleteAsset(id){const db=await openDB();return new Promise(res=>{const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).delete(id);tx.oncomplete=res})}
 async function clearLibrary(){if(!confirm("¿Borrar todos los archivos guardados en este dispositivo?"))return;const db=await openDB();db.transaction(STORE,"readwrite").objectStore(STORE).clear();renderLibrary();updateStats();toast("Biblioteca local borrada")}
-async function loadDataURL(data,name){const img=new Image();img.onload=()=>{currentImage=img;currentName=name.replace(/\.[^.]+$/,"");$("#ht-empty").classList.add("hidden");$("#ht-canvas").classList.remove("hidden");renderHT()};img.onerror=()=>toast("Formato de imagen no compatible");img.src=data}
+function loadDataURL(data,name){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{if(!img.naturalWidth||!img.naturalHeight)throw new Error("La imagen no tiene dimensiones válidas");currentImage=img;currentName=String(name||"diseño").replace(/\.[^.]+$/," ").trim()||"diseño";$("#ht-empty").classList.add("hidden");$("#ht-canvas").classList.remove("hidden");renderHT();resolve(img)}catch(err){reject(err)}};img.onerror=()=>reject(new Error("El navegador no pudo decodificar la imagen"));img.src=data;})}
 async function renderLibrary(){const assets=await getAssets();const grid=$("#library-grid");grid.innerHTML="";$("#library-empty").classList.toggle("hidden",assets.length>0);for(const a of assets){const el=document.createElement("div");el.className="asset";el.innerHTML=`<img alt=""><strong title="${escapeHTML(a.name)}">${escapeHTML(a.name)}</strong><small>${new Date(a.created).toLocaleDateString()}</small><div class="row" style="margin-top:8px"><button class="btn small use">Abrir</button><button class="btn small del">Eliminar</button></div>`;el.querySelector("img").src=a.data;el.querySelector(".use").onclick=()=>{loadDataURL(a.data,a.name);go("halftone")};el.querySelector(".del").onclick=async()=>{await deleteAsset(a.id);renderLibrary();updateStats()};grid.append(el)}}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function updateStats(){$("#stat-assets").textContent=(await getAssets()).length}
