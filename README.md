@@ -47,3 +47,10 @@ Subir y reemplazar los seis archivos `index.html`, `app.js`, `sw.js`, `manifest.
 - El selector de fondo aplica el color directamente al área completa de previsualización mediante estilos prioritarios; el modo cuadriculado se puede restaurar con su botón.
 - La mesa de trabajo calcula el tamaño visible según el espacio disponible y la proporción de la imagen. La imagen se muestra completa, sin recortes ni deformaciones.
 - El ajuste afecta únicamente a la presentación en pantalla: las dimensiones y los píxeles del canvas exportado permanecen intactos.
+
+
+## CT LAB PRO v2.7 — Zoom de vista previa
+- Controles de acercar y alejar (25% a 500%) en Halftone Studio.
+- Botón Ajustar para volver a encajar la imagen completa en la mesa.
+- Al ampliar, la mesa permite desplazamiento horizontal y vertical mediante sus barras de desplazamiento.
+- El zoom afecta únicamente la visualización; no cambia dimensiones, DPI ni píxeles exportados.
