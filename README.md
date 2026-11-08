@@ -42,3 +42,8 @@ Subir y reemplazar los seis archivos `index.html`, `app.js`, `sw.js`, `manifest.
 - En pantallas pequeñas, el diseño vuelve a flujo vertical para conservar usabilidad.
 - Se puede elegir un color sólido para el fondo de vista previa o volver al patrón cuadriculado.
 - El color de vista previa se aplica únicamente al contenedor visual: no forma parte del canvas ni del PNG exportado.
+
+## v2.6 — vista previa y ajuste automático
+- El selector de fondo aplica el color directamente al área completa de previsualización mediante estilos prioritarios; el modo cuadriculado se puede restaurar con su botón.
+- La mesa de trabajo calcula el tamaño visible según el espacio disponible y la proporción de la imagen. La imagen se muestra completa, sin recortes ni deformaciones.
+- El ajuste afecta únicamente a la presentación en pantalla: las dimensiones y los píxeles del canvas exportado permanecen intactos.
