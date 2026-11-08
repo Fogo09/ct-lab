@@ -24,3 +24,10 @@ Subir y reemplazar los seis archivos `index.html`, `app.js`, `sw.js`, `manifest.
 - DTF Studio actual es un montador básico; no incorpora todavía nesting industrial, perfiles ICC ni RIP. La resolución efectiva debe comprobarse antes de producción.
 - Mockup Studio es una simulación esquemática, no un mockup fotográfico realista.
 - Probado con comprobación sintáctica del JavaScript; requiere validación funcional en el navegador y pruebas de impresión antes de uso productivo.
+
+
+## v2.3 — Corrección de semitono a color
+- El modo combinado elimina el fondo conectado a los bordes mediante selección por color.
+- Conserva los canales RGB originales del personaje.
+- No elimina automáticamente las zonas blancas del sujeto.
+- Mantiene detalles oscuros internos al limitar la eliminación al fondo conectado con los bordes.
