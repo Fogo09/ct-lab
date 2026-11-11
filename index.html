@@ -46,7 +46,7 @@ main{min-width:0}.topbar{height:72px;border-bottom:1px solid var(--line);display
 .hidden{display:none!important}.section{display:none}.section.active{display:block}
 @media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:sticky;top:0;z-index:6;padding:10px 12px;border-right:0;border-bottom:1px solid var(--line)}.brand{padding:0 4px}.nav{display:flex;overflow:auto}.nav-label,.sidebar-foot{display:none}.nav button{white-space:nowrap;padding:9px}.topbar{height:54px;padding:0 16px}.content{padding:20px 14px}.tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace,.dtf-layout{grid-template-columns:1fr}.cards{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:520px){.tool-grid{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr}.page-head{align-items:flex-start;flex-direction:column}.page-head h1{font-size:25px}.content{padding:16px 12px}.canvas-wrap{min-height:280px}.top-actions .pill:nth-child(2){display:none}}
-</style>
+textarea{width:100%;background:#11110f;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}#ai-assistant .panel{min-width:0}#ai-assistant label{display:block;margin:12px 0 5px;color:var(--muted)}#ai-assistant input,#ai-assistant select{width:100%;padding:10px;background:#11110f;color:var(--ink);border:1px solid var(--line);border-radius:8px}#ai-assistant .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}#ai-assistant .stat{background:var(--panel2);padding:12px;border-radius:8px}#ai-assistant .stat strong,#ai-assistant .stat span{display:block}#ai-assistant .stat span{font-size:11px;color:var(--muted)}</style>
 </head>
 <body>
 <div class="app">
@@ -57,12 +57,12 @@ main{min-width:0}.topbar{height:72px;border-bottom:1px solid var(--line);display
     <button data-page="library"><span class="ico">▧</span> Biblioteca</button>
     <button data-page="halftone"><span class="ico">◉</span> Halftone Pro</button><button data-page="transparency"><span class="ico">◌</span> Transparencias</button><button data-page="enhancer"><span class="ico">✧</span> Image Enhancer</button><button data-page="vector"><span class="ico">⌘</span> Vector Lab</button>
     <button data-page="dtf"><span class="ico">▦</span> DTF Pro</button><button data-page="mockup"><span class="ico">▣</span> Mockup Studio</button>
-    <button data-page="export"><span class="ico">⇩</span> Exportaciones</button>
+    <button data-page="export"><span class="ico">⇩</span> Exportaciones</button><button data-page="ai-assistant"><span class="ico">✧</span> CT AI Assistant</button>
   </nav></div>
   <div><div class="nav-label">SISTEMA</div><nav class="nav">
     <button data-page="settings"><span class="ico">⚙</span> Ajustes</button>
   </nav></div>
-  <div class="sidebar-foot">CT LAB PRO v2.0 · CREATIVE PRODUCTION SUITE<br>Suscripciones: ninguna</div>
+  <div class="sidebar-foot">CT LAB PRO v3.0 · CREATIVE PRODUCTION SUITE<br>Suscripciones: ninguna</div>
 </aside>
 <main>
 <header class="topbar"><div class="crumb">CUATRO TRAZOS <span style="color:#615b50">/</span> <span id="crumb">Inicio</span></div><div class="top-actions"><span class="pill"><i class="dot"></i>Motor local activo</span><span class="pill">OFFLINE READY</span></div></header>
@@ -88,7 +88,7 @@ main{min-width:0}.topbar{height:72px;border-bottom:1px solid var(--line);display
 </section>
 
 <section class="section" id="halftone">
-  <div class="page-head"><div><div class="eyebrow">IMAGE PROCESSING</div><h1>Halftone Studio</h1><p>Convertí una imagen en una trama de semitonos y ajustá su apariencia.</p></div><button class="btn primary" onclick="openFile()">＋ Abrir imagen</button></div>
+  <div class="page-head"><div><div class="eyebrow">IMAGE PROCESSING</div><h1>CT Separation Pro</h1><p>Prepará, separá y generá tramas para producción DTF desde una mesa de trabajo local.</p></div><button class="btn primary" onclick="openFile()">＋ Abrir imagen</button></div>
   <div class="workspace">
     <div class="canvas-wrap" id="ht-canvas-wrap"><div class="ht-preview-tools"><strong>FONDO DE VISTA PREVIA</strong><input id="ht-preview-bg" type="color" value="#777777" aria-label="Color del fondo de vista previa"><button class="btn small" id="ht-preview-checker" type="button">Cuadriculado</button><span>Solo visualización · no se exporta</span><div class="ht-zoom-tools"><button class="btn small" id="ht-zoom-out" type="button" aria-label="Alejar">−</button><output id="ht-zoom-value">Ajustar</output><button class="btn small" id="ht-zoom-in" type="button" aria-label="Acercar">＋</button><button class="btn small" id="ht-zoom-fit" type="button">Ajustar</button></div></div><div id="ht-empty" class="empty"><div class="big">◉</div><b>Importá una imagen para comenzar</b><br><small>El procesamiento se realiza en tu dispositivo.</small></div><canvas id="ht-canvas" class="hidden"></canvas></div>
     <div class="panel controls">
@@ -109,6 +109,16 @@ main{min-width:0}.topbar{height:72px;border-bottom:1px solid var(--line);display
       <div class="panel" id="ht-garment-panel" style="padding:12px"><b>INTEGRACIÓN CON EL COLOR DE LA PRENDA</b><p class="sub">Para una remera negra, convertí los tonos negros de la estampa en transparencia: la tela negra completa visualmente esas zonas.</p>
         <label class="sub"><input id="ht-garment-knockout" type="checkbox"> Fusionar con prenda negra (quitar negros de la estampa)</label>
         <div class="control"><label>Tolerancia de negro <b id="ht-black-v">32</b></label><input id="ht-black-tol" type="range" min="0" max="120" value="32"></div>
+      </div>
+      <div class="panel" style="padding:12px"><b>TRAMA DE IMPRESIÓN AVANZADA</b><p class="sub">Controlá la frecuencia y geometría de los puntos. El valor LPI es una referencia de trama; verificá el resultado con tu proveedor DTF.</p>
+        <div class="row"><div class="control"><label>Frecuencia (LPI)</label><input id="ht-lpi" type="number" min="20" max="120" value="45"></div><div class="control"><label>Ángulo (°)</label><input id="ht-angle" type="number" min="0" max="180" value="45"></div></div>
+        <div class="control"><label>Forma del punto</label><select id="ht-dot-shape"><option value="circle">Circular</option><option value="ellipse">Elíptico</option><option value="square">Cuadrado</option><option value="line">Línea</option></select></div>
+        <div class="sub" id="ht-lpi-info">Paso de trama calculado según DPI.</div>
+      </div>
+      <div class="panel" style="padding:12px"><b>BASE BLANCA · UNDERBASE</b><p class="sub">Generá una máscara blanca independiente a partir de la transparencia del diseño. Ajustá el cierre hacia adentro (choke) para reducir bordes blancos visibles.</p>
+        <div class="control"><label>Choke (px)</label><input id="ht-choke" type="range" min="0" max="5" value="1"><span class="sub" id="ht-choke-v">1 px</span></div>
+        <button class="btn" type="button" onclick="downloadUnderbase()">Exportar base blanca PNG</button>
+        <button class="btn" type="button" onclick="downloadAlphaMask()">Exportar máscara de transparencia</button>
       </div>
       <div class="control"><label>Frecuencia de puntos <b id="v-cell">8</b> px</label><input id="ht-cell" type="range" min="3" max="24" value="8"></div>
       <div class="control"><label>Contraste <b id="v-contrast">35</b></label><input id="ht-contrast" type="range" min="-100" max="100" value="35"></div>
@@ -149,6 +159,51 @@ main{min-width:0}.topbar{height:72px;border-bottom:1px solid var(--line);display
     <div class="tool-card" onclick="go('library')"><div class="symbol">▤</div><h3>Administrar archivos</h3><p>Revisá y descargá tus recursos.</p></div>
   </div>
   <div class="panel" style="margin-top:16px"><h2>Consejo de producción</h2><p class="sub">Antes de imprimir, verificá dimensiones físicas, resolución efectiva, perfiles de color y requisitos específicos de tu proveedor DTF. La exportación PNG no reemplaza una prueba de impresión.</p></div>
+</section>
+
+
+<section class="section" id="ai-assistant">
+  <div class="page-head"><div><div class="eyebrow">HYBRID AI WORKFLOW</div><h1>CT AI Assistant</h1><p>Prepará un paquete técnico para solicitar restauración, limpieza o separación asistida por IA.</p></div></div>
+  <div class="grid two">
+    <div class="panel controls">
+      <h2>1. Objetivo del trabajo</h2>
+      <label>Tipo de asistencia</label>
+      <select id="ai-task">
+        <option value="restoration">Restauración y mejora de imagen</option>
+        <option value="background">Eliminación inteligente de fondo</option>
+        <option value="separation">Separación y análisis de colores</option>
+        <option value="cleanup">Limpieza y reconstrucción de estampa</option>
+        <option value="garment">Preparación para prenda negra o de color</option>
+      </select>
+      <label>Tipo de prenda</label>
+      <select id="ai-garment"><option>Remera negra</option><option>Remera blanca</option><option>Prenda de color</option><option>Sin especificar</option></select>
+      <label>Objetivo / instrucciones</label>
+      <textarea id="ai-notes" rows="5" placeholder="Ej.: conservar exactamente el personaje y los colores, eliminar solo el fondo negro, recuperar bordes y preparar PNG transparente para DTF."></textarea>
+      <label>Resolución final deseada</label>
+      <select id="ai-dpi"><option>300 DPI</option><option>360 DPI</option><option>200 DPI</option><option>150 DPI</option><option>Definir después</option></select>
+      <label>Medida final (cm)</label>
+      <input id="ai-size" type="text" placeholder="Ej.: 28 × 32 cm">
+      <button class="btn primary" id="ai-generate">Generar paquete de asistencia</button>
+      <p class="muted" id="ai-status">El paquete incluye la imagen original y un informe JSON con el objetivo y los parámetros. No modifica tu diseño.</p>
+    </div>
+    <div class="panel">
+      <h2>2. Qué enviar a ChatGPT</h2>
+      <div class="empty" style="min-height:140px">Abrí primero la imagen en Halftone Pro o Biblioteca. Después generá el paquete desde aquí.</div>
+      <div class="stat-grid">
+        <div class="stat"><strong>01</strong><span>Imagen original</span></div>
+        <div class="stat"><strong>02</strong><span>Informe técnico</span></div>
+        <div class="stat"><strong>03</strong><span>Instrucciones</span></div>
+      </div>
+      <h3>Control de calidad al regresar</h3>
+      <ul class="muted">
+        <li>Comparar dimensiones y proporciones.</li>
+        <li>Revisar transparencia y bordes.</li>
+        <li>Confirmar que textos y personajes no cambiaron.</li>
+        <li>Validar el resultado antes de preparar DTF.</li>
+      </ul>
+      <p class="muted">La IA se utiliza como asistencia externa: esta versión no se conecta automáticamente a un servicio de IA ni sube tus imágenes a internet.</p>
+    </div>
+  </div>
 </section>
 
 <section class="section" id="settings">

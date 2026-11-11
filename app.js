@@ -71,6 +71,9 @@ function renderHT(){
   const t=tmp.getContext('2d',{willReadFrequently:true});t.drawImage(currentImage,0,0,c.width,c.height);
   const src=t.getImageData(0,0,c.width,c.height),out=ctx.createImageData(c.width,c.height),mode=htToolMode;
   const contrast=+$('#ht-contrast').value,bright=+$('#ht-bright').value,threshold=+$('#ht-threshold').value,cell=Math.max(1,+$('#ht-cell').value),transparent=$('#ht-transparent').checked;
+  const lpi=Math.max(20,Math.min(120,+($('#ht-lpi')?.value||45))),angle=(+($('#ht-angle')?.value||0))*Math.PI/180,dotShape=$('#ht-dot-shape')?.value||'circle';
+  const lpiCell=Math.max(3,Math.min(24,Math.round(dpi/lpi)));if($('#ht-lpi-info'))$('#ht-lpi-info').textContent=`Paso aproximado: ${lpiCell} px por celda a ${dpi} DPI · ${lpi} LPI`;
+  const effectiveCell=Math.max(1,Math.round(lpiCell));
   const factor=(259*(contrast+255))/(255*(259-contrast));
   const key=hexRGB($('#ht-key-color')?.value||'#000000'),tol=+($('#ht-tol')?.value||35),soft=+($('#ht-soft')?.value||12),ink=hexRGB(htInk);
   // Combined mode: remove only background connected to image edges. This preserves
@@ -90,9 +93,10 @@ function renderHT(){
    // output already contains the color-keyed original
   }else if(mode==='color'||mode==='mono'||mode==='keyhalftone'){
    out.data.fill(0);
-   for(let y=0;y<c.height;y+=cell)for(let x=0;x<c.width;x+=cell){
+   const step=effectiveCell;
+   for(let y=0;y<c.height;y+=step)for(let x=0;x<c.width;x+=step){
     let rr=0,gg=0,bb=0,ll=0,aa=0,n=0;
-    for(let yy=y;yy<Math.min(y+cell,c.height);yy++)for(let xx=x;xx<Math.min(x+cell,c.width);xx++){
+    for(let yy=y;yy<Math.min(y+step,c.height);yy++)for(let xx=x;xx<Math.min(x+step,c.width);xx++){
      const i=(yy*c.width+xx)*4,a=src.data[i+3]/255;rr+=src.data[i]*a;gg+=src.data[i+1]*a;bb+=src.data[i+2]*a;ll+=(.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2])*a;aa+=a;n++;
     }
     if(!n||aa<.001)continue;
@@ -102,11 +106,11 @@ function renderHT(){
     // In combined mode, keep all subject tones; the background is removed by edge flood-fill,
     // not by deleting white pixels. RGB values are sampled and retained per halftone cell.
     if(mode!=='keyhalftone'&&transparent&&lum>247)continue;
-    const radius=(1-lum/255)*(cell*.70),cx=x+cell/2,cy=y+cell/2;
+    const radius=(1-lum/255)*(step*.70),cx=x+step/2,cy=y+step/2;
     if(radius<.35)continue;
     const col=mode==='mono'?ink:[Math.round(rr),Math.round(gg),Math.round(bb)];
     const alpha=Math.round(255*Math.min(1,aa/n));
-    for(let yy=Math.max(0,Math.floor(cy-radius));yy<Math.min(c.height,Math.ceil(cy+radius));yy++)for(let xx=Math.max(0,Math.floor(cx-radius));xx<Math.min(c.width,Math.ceil(cx+radius));xx++)if((xx-cx)**2+(yy-cy)**2<=radius*radius){const i=(yy*c.width+xx)*4;out.data[i]=col[0];out.data[i+1]=col[1];out.data[i+2]=col[2];out.data[i+3]=alpha}
+    for(let yy=Math.max(0,Math.floor(cy-radius));yy<Math.min(c.height,Math.ceil(cy+radius));yy++)for(let xx=Math.max(0,Math.floor(cx-radius));xx<Math.min(c.width,Math.ceil(cx+radius));xx++){const dx=xx-cx,dy=yy-cy,rx=dx*Math.cos(angle)+dy*Math.sin(angle),ry=-dx*Math.sin(angle)+dy*Math.cos(angle);let inside=false;if(dotShape==='square')inside=Math.abs(rx)<=radius*.78&&Math.abs(ry)<=radius*.78;else if(dotShape==='ellipse')inside=(rx/(radius*.95))**2+(ry/(radius*.62))**2<=1;else if(dotShape==='line')inside=Math.abs(ry)<=Math.max(.6,radius*.22)&&Math.abs(rx)<=radius;else inside=rx*rx+ry*ry<=radius*radius;if(inside){const i=(yy*c.width+xx)*4;out.data[i]=col[0];out.data[i+1]=col[1];out.data[i+2]=col[2];out.data[i+3]=alpha}}
    }
   }else{
    for(let i=0;i<src.data.length;i+=4){let lum=.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2];lum=Math.max(0,Math.min(255,factor*(lum-128)+128+bright*2.55));let r=lum,g=lum,b=lum,a=src.data[i+3];if(mode==='threshold'){const v=lum>=threshold?255:0;if(transparent&&v===255)a=0;r=g=b=v}else if(mode==='posterize'){const v=Math.round(lum/64)*64;r=g=b=v}else if(mode==='original'){r=src.data[i];g=src.data[i+1];b=src.data[i+2]}out.data[i]=r;out.data[i+1]=g;out.data[i+2]=b;out.data[i+3]=a}
@@ -125,6 +129,16 @@ function renderHT(){
 }
 function hexRGB(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16))}
 function downloadCanvas(canvas,name){canvas.toBlob(blob=>{if(!blob){toast("No se pudo exportar");return}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}, "image/png")}
+function downloadUnderbase(){
+ if(!lastHT||!lastHT.width)return toast('Primero procesá una imagen');
+ const src=lastHT.getContext('2d',{willReadFrequently:true}).getImageData(0,0,lastHT.width,lastHT.height),w=lastHT.width,h=lastHT.height,mask=new Uint8Array(w*h);
+ for(let p=0;p<w*h;p++)mask[p]=src.data[p*4+3]>8?1:0;
+ const choke=+($('#ht-choke')?.value||0);let current=mask;
+ // Erosión binaria conservadora para contraer la base blanca y evitar halos.
+ for(let n=0;n<choke;n++){const next=new Uint8Array(w*h);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(current[i]&&current[i-1]&&current[i+1]&&current[i-w]&&current[i+w])next[i]=1;}current=next;}
+ const c=document.createElement('canvas');c.width=w;c.height=h;const cx=c.getContext('2d'),im=cx.createImageData(w,h);for(let p=0;p<w*h;p++){const i=p*4;if(current[p]){im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=255;}}cx.putImageData(im,0,0);downloadCanvas(c,currentName+'-CTLAB-underbase-white.png');
+}
+function downloadAlphaMask(){if(!lastHT||!lastHT.width)return toast('Primero procesá una imagen');const w=lastHT.width,h=lastHT.height,src=lastHT.getContext('2d').getImageData(0,0,w,h),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h);for(let i=0;i<src.data.length;i+=4){const a=src.data[i+3];im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=a;}x.putImageData(im,0,0);downloadCanvas(c,currentName+'-CTLAB-alpha-mask.png')}
 function downloadHT(){if(!currentImage){toast("Primero abrí una imagen");return}downloadCanvas($("#ht-canvas"),currentName+"-CTLAB.png")}
 async function saveCurrentToLibrary(){if(!currentImage)return toast("Primero abrí una imagen");const data=$("#ht-canvas").toDataURL("image/png");await addAsset({name:currentName+"-procesado.png",type:"image/png",data,created:Date.now()});updateStats();toast("Resultado guardado en biblioteca")}
 function renderDTFAssets(){getAssets().then(assets=>{const box=$("#dtf-assets");box.innerHTML="";assets.forEach(a=>{const label=document.createElement("label");label.className="row";label.style.fontSize="12px";label.innerHTML=`<input type="checkbox" data-id="${a.id}" checked style="accent-color:#c7ad7a"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHTML(a.name)}</span>`;box.append(label)});if(!assets.length)box.textContent="No hay diseños guardados. Importá archivos en Biblioteca."})}
@@ -160,6 +174,9 @@ function renderMockup(){const c=$('#mk-canvas'),ctx=c.getContext('2d'),color=$('
  setHTMode('color');
 
 // CT LAB PRO v2.4 — print sizing, alpha cleanup and garment color integration
+$('#ht-cell')?.addEventListener('input',()=>{const dpi=+($('#ht-dpi')?.value||300),cell=Math.max(3,+$('#ht-cell').value);$('#ht-lpi').value=Math.max(20,Math.min(120,Math.round(dpi/cell)));renderHT()});
+$('#ht-lpi')?.addEventListener('input',()=>{const dpi=+($('#ht-dpi')?.value||300),lpi=Math.max(20,+$('#ht-lpi').value||45);$('#ht-cell').value=Math.max(3,Math.min(24,Math.round(dpi/lpi)));$('#v-cell').textContent=$('#ht-cell').value;renderHT()});
+;['ht-lpi','ht-angle','ht-dot-shape','ht-choke'].forEach(id=>{const el=$('#'+id);if(!el)return;el.addEventListener('input',()=>{if(id==='ht-choke')$('#ht-choke-v').textContent=el.value+' px';renderHT()});el.addEventListener('change',renderHT)});
 ;['ht-width-cm','ht-height-cm','ht-dpi','ht-lock-ratio','ht-clean-alpha','ht-alpha-cut','ht-garment-knockout','ht-black-tol'].forEach(id=>{const el=$('#'+id);if(!el)return;el.addEventListener('input',()=>{if(id==='ht-width-cm'&&$('#ht-lock-ratio').checked&&currentImage){$('#ht-height-cm').value=(+el.value*currentImage.naturalHeight/currentImage.naturalWidth).toFixed(1)}renderHT()});el.addEventListener('change',renderHT)});
 
 
@@ -212,3 +229,36 @@ function renderMockup(){const c=$('#mk-canvas'),ctx=c.getContext('2d'),color=$('
  if('ResizeObserver' in window){new ResizeObserver(()=>window.fitHalftonePreview()).observe(wrap)}
  window.addEventListener('resize',()=>window.fitHalftonePreview());
 })();
+
+
+// CT AI Assistant: genera un informe portable y exporta la imagen original por separado.
+async function generateAIAssistantPackage(){
+  if(!currentImage || !currentImage.src){toast("Primero abrí una imagen en CT LAB");return;}
+  const task=document.querySelector("#ai-task")?.value||"restoration";
+  const taskNames={restoration:"Restauración y mejora de imagen",background:"Eliminación inteligente de fondo",separation:"Separación y análisis de colores",cleanup:"Limpieza y reconstrucción de estampa",garment:"Preparación para prenda negra o de color"};
+  const report={
+    application:"CT LAB — CT AI Assistant",
+    packageVersion:"3.1",
+    createdAt:new Date().toISOString(),
+    workflow:"Asistencia externa mediante ChatGPT; no se realiza carga automática ni conexión a servicios externos.",
+    task:taskNames[task]||task,
+    garment:document.querySelector("#ai-garment")?.value||"Sin especificar",
+    targetResolution:document.querySelector("#ai-dpi")?.value||"Definir después",
+    targetPhysicalSize:document.querySelector("#ai-size")?.value||"No especificada",
+    instructions:document.querySelector("#ai-notes")?.value||"",
+    sourceImage:{name:currentName,width:currentImage.naturalWidth,height:currentImage.naturalHeight,format:"imagen original del usuario"},
+    requirements:["Conservar composición, textos, personajes y colores salvo indicación explícita.","No inventar elementos ni redibujar la identidad de la estampa.","Entregar PNG con transparencia cuando corresponda.","Informar cualquier reconstrucción aproximada realizada por IA.","Mantener proporciones y documentar dimensiones finales."],
+    returnChecklist:["Imagen procesada en PNG","Máscara alfa o máscara de separación si corresponde","Dimensiones en píxeles y centímetros","DPI objetivo y DPI efectivo","Notas sobre detalles reconstruidos o modificados"]
+  };
+  const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="CT-AI-brief-"+Date.now()+".json";a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  const imageUrl=currentImage.src;
+  const ext=/\.jpe?g/i.test(currentName)?"jpg":/\.webp/i.test(currentName)?"webp":"png";
+  const b=document.createElement("a");b.href=imageUrl;b.download="CT-AI-original-"+Date.now()+"."+ext;b.click();
+  const status=document.querySelector("#ai-status");
+  if(status)status.textContent="Paquete generado: se descargaron el informe JSON y la imagen original por separado. Adjuntá ambos archivos en tu conversación de ChatGPT.";
+  toast("Informe e imagen original preparados");
+}
+document.querySelector("#ai-generate")?.addEventListener("click",generateAIAssistantPackage);

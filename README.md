@@ -54,3 +54,32 @@ Subir y reemplazar los seis archivos `index.html`, `app.js`, `sw.js`, `manifest.
 - Botón Ajustar para volver a encajar la imagen completa en la mesa.
 - Al ampliar, la mesa permite desplazamiento horizontal y vertical mediante sus barras de desplazamiento.
 - El zoom afecta únicamente la visualización; no cambia dimensiones, DPI ni píxeles exportados.
+
+
+## CT LAB PRO v3.0 — Separation workflow
+
+Esta actualización amplía el módulo de semitonos con controles de trama y herramientas de separación para preparación DTF:
+
+- Frecuencia de trama expresada como LPI y sincronizada con el paso de celda en píxeles según el DPI elegido.
+- Ángulo de trama y formas de punto circular, elíptico, cuadrado y línea.
+- Exportación de base blanca independiente desde la transparencia del arte, con choke configurable.
+- Exportación de máscara alfa independiente para inspección del área imprimible.
+- Se conserva la eliminación de fondo por cuentagotas, modo combinado quitar fondo + semitono, conservación de color, limpieza de alfa, fusión de negros y zoom/vista de fondo.
+
+### Límites importantes de esta versión
+
+- El control LPI/ángulo/forma es una trama raster de previsualización y preparación; no equivale a un motor RIP calibrado. Confirmá frecuencia, ángulo y lineatura con el proveedor de impresión.
+- La base blanca se genera como máscara derivada del alfa del resultado; no incluye perfiles ICC, choke por canal avanzado ni compensación automática según tinta/prensa.
+- Image Enhancer usa interpolación y filtros locales; no es un modelo de super-resolución por IA ni recupera detalle que no exista en el original.
+- No se incluye todavía separación CMYK spot-channel, edición por pincel/máscara, trapping avanzado ni AI upscaler.
+- El procesamiento es local en el navegador. Las funciones de IA online quedan previstas para una integración futura opcional; esta versión no requiere suscripciones ni envía imágenes a servidores.
+
+**Recomendación de producción:** trabajar sobre una copia, inspeccionar al 100–200% con distintos fondos de previsualización y realizar una prueba física antes de producir una tirada.
+
+
+## CT LAB PRO v3.1 — CT AI Assistant
+- Nueva sección CT AI Assistant para preparar un brief técnico de asistencia externa.
+- Exporta el informe JSON y la imagen original en dos archivos separados para adjuntarlos manualmente a ChatGPT.
+- Incluye objetivo, tipo de prenda, DPI y medida final, instrucciones y lista de control de retorno.
+- No conecta con APIs ni sube imágenes automáticamente; el usuario controla qué comparte.
+- Esta función organiza el flujo de trabajo, no realiza por sí sola restauración IA, segmentación IA ni validación automática de calidad.
