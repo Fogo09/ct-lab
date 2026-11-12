@@ -1,4 +1,4 @@
-# CT LAB PRO v2.4 — CUATRO TRAZOS
+# CT LAB PRO v3.2 — CUATRO TRAZOS
 
 PWA de procesamiento gráfico local. Reemplaza los archivos del repositorio por los de esta carpeta en la raíz de la rama `principal`.
 
@@ -8,7 +8,8 @@ PWA de procesamiento gráfico local. Reemplaza los archivos del repositorio por 
 - Integración con prenda negra: vuelve transparentes los píxeles de tinta suficientemente oscuros para que la tela negra complete esas zonas. Ajustable por tolerancia; revisar textos y detalles negros porque también pueden desaparecer.
 - Limpieza de alpha opcional: elimina semitransparencias por debajo del umbral y vuelve opacos los píxeles restantes. Puede endurecer bordes finos; revisar antes de imprimir.
 - Biblioteca local IndexedDB (misma base `ctlab-db`, almacén `assets`, para conservar diseños ya guardados en el mismo navegador/origen).
-- Halftone Pro v2.1: semitono a color preservando tonos locales; eliminación de fondo con cuentagotas sobre la imagen original, tolerancia y borde suave; semitono monocromático con tinta blanca o negra; ajustes de frecuencia, contraste y brillo; exportación PNG.
+- Halftone Pro: semitono a color preservando tonos locales; eliminación de fondo por regiones conectadas a los bordes (flood fill) para conservar negros internos; cuentagotas, tolerancia y borde suave; semitono monocromático; ajustes de frecuencia, contraste y brillo; exportación PNG.
+- Corrección v3.2: el modo “Quitar fondo” elimina únicamente píxeles similares al color elegido que estén conectados al borde de la imagen. Los valores cero de tolerancia y borde suave se respetan correctamente.
 - Transparency Lab: eliminación de fondo por color/tolerancia e inversión de selección, exportación PNG con alpha.
 - Image Enhancer: ajustes de nitidez, reducción de ruido, contraste, brillo y escalado por interpolación del navegador.
 - Vector Lab: vectorización monocromática aproximada basada en rectángulos SVG; no sustituye un trazador Bézier profesional.
@@ -20,7 +21,7 @@ PWA de procesamiento gráfico local. Reemplaza los archivos del repositorio por 
 Subir y reemplazar los seis archivos `index.html`, `app.js`, `sw.js`, `manifest.webmanifest`, `icon.svg` y `README.md` en la raíz del repositorio. Mantener la rama `principal` y la carpeta raíz en GitHub Pages. Confirmar el commit y esperar que `pages build and deployment` quede verde. En Chrome, abrir el sitio y realizar `Ctrl+Shift+R`.
 
 ## Límites técnicos importantes
-- El cuentagotas elimina un color por similitud RGB; fondos con sombras, degradados o el mismo color dentro del personaje pueden requerir ajustar tolerancia y suavizado. Revisar siempre los bordes antes de exportar.
+- La eliminación por conectividad conserva zonas similares de color que estén encerradas dentro del diseño. Si el fondo entra en contacto con el sujeto por una abertura, puede alcanzar regiones internas; revisar siempre los bordes antes de exportar. Fondos con sombras o degradados pueden requerir ajustar tolerancia y suavizado.
 - El semitono a color genera puntos con el color promedio de cada celda; no es una separación CMYK ni un RIP de impresión.
 - Las imágenes se procesan localmente. La biblioteca está almacenada por navegador/dispositivo y no sincroniza entre equipos.
 - Image Enhancer aplica filtros clásicos e interpolación; no incluye un modelo de IA de superresolución ni puede recuperar información que no exista en el original.

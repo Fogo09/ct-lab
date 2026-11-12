@@ -75,19 +75,28 @@ function renderHT(){
   const lpiCell=Math.max(3,Math.min(24,Math.round(dpi/lpi)));if($('#ht-lpi-info'))$('#ht-lpi-info').textContent=`Paso aproximado: ${lpiCell} px por celda a ${dpi} DPI · ${lpi} LPI`;
   const effectiveCell=Math.max(1,Math.round(lpiCell));
   const factor=(259*(contrast+255))/(255*(259-contrast));
-  const key=hexRGB($('#ht-key-color')?.value||'#000000'),tol=+($('#ht-tol')?.value||35),soft=+($('#ht-soft')?.value||12),ink=hexRGB(htInk);
-  // Combined mode: remove only background connected to image edges. This preserves
-  // dark pixels/details inside the subject and never converts RGB to grayscale.
-  if(mode==='keyhalftone'){
-   const w=c.width,h=c.height,total=w*h,limit=tol+soft,seen=new Uint8Array(total),queue=new Int32Array(total);let head=0,tail=0;
+  const key=hexRGB($('#ht-key-color')?.value||'#000000');
+  // Read slider values without `||`: zero is a valid and intentional setting.
+  const tol=Number($('#ht-tol')?.value ?? 35),soft=Number($('#ht-soft')?.value ?? 12),ink=hexRGB(htInk);
+  // Background keying is edge-connected in BOTH removal modes. Similar-colored
+  // pixels enclosed by the artwork (hair, outlines, lettering and symbols) survive.
+  if(mode==='keyhalftone'||mode==='remove'){
+   const w=c.width,h=c.height,total=w*h,limit=Math.max(0,tol)+Math.max(0,soft);
+   const seen=new Uint8Array(total),queue=new Int32Array(total);let head=0,tail=0;
    const isBg=(idx)=>{const i=idx*4,d=Math.hypot(src.data[i]-key[0],src.data[i+1]-key[1],src.data[i+2]-key[2]);return d<=limit};
    const seed=(idx)=>{if(idx>=0&&idx<total&&!seen[idx]&&isBg(idx)){seen[idx]=1;queue[tail++]=idx}};
+   // Seed all four image edges, then flood-fill with conservative 4-neighbour connectivity.
    for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x)}
    for(let y=1;y<h-1;y++){seed(y*w);seed(y*w+w-1)}
    while(head<tail){const idx=queue[head++],x=idx%w,y=(idx/w)|0;if(x>0)seed(idx-1);if(x<w-1)seed(idx+1);if(y>0)seed(idx-w);if(y<h-1)seed(idx+w)}
-   for(let idx=0;idx<total;idx++)if(seen[idx]){const i=idx*4,d=Math.hypot(src.data[i]-key[0],src.data[i+1]-key[1],src.data[i+2]-key[2]);const feather=soft?Math.max(0,Math.min(1,(d-tol)/soft)):0;src.data[i+3]=Math.round(src.data[i+3]*feather)}
-  }else if(mode==='remove'){
-   for(let i=0;i<src.data.length;i+=4){const d=Math.hypot(src.data[i]-key[0],src.data[i+1]-key[1],src.data[i+2]-key[2]),edge=Math.max(0,Math.min(1,(d-tol)/Math.max(1,soft)));out.data[i]=src.data[i];out.data[i+1]=src.data[i+1];out.data[i+2]=src.data[i+2];out.data[i+3]=Math.round(src.data[i+3]*edge)}
+   if(mode==='remove')out.data.set(src.data);
+   for(let idx=0;idx<total;idx++)if(seen[idx]){
+    const i=idx*4,d=Math.hypot(src.data[i]-key[0],src.data[i+1]-key[1],src.data[i+2]-key[2]);
+    // Pixels inside the tolerance become transparent; the soft band feathers outward.
+    const feather=soft>0?Math.max(0,Math.min(1,(d-tol)/soft)):(d<=tol?0:1);
+    if(mode==='keyhalftone')src.data[i+3]=Math.round(src.data[i+3]*feather);
+    else out.data[i+3]=Math.round(src.data[i+3]*feather);
+   }
   }
   if(mode==='remove'){
    // output already contains the color-keyed original
