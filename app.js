@@ -148,7 +148,43 @@ function downloadUnderbase(){
  const c=document.createElement('canvas');c.width=w;c.height=h;const cx=c.getContext('2d'),im=cx.createImageData(w,h);for(let p=0;p<w*h;p++){const i=p*4;if(current[p]){im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=255;}}cx.putImageData(im,0,0);downloadCanvas(c,currentName+'-CTLAB-underbase-white.png');
 }
 function downloadAlphaMask(){if(!lastHT||!lastHT.width)return toast('Primero procesá una imagen');const w=lastHT.width,h=lastHT.height,src=lastHT.getContext('2d').getImageData(0,0,w,h),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h);for(let i=0;i<src.data.length;i+=4){const a=src.data[i+3];im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=a;}x.putImageData(im,0,0);downloadCanvas(c,currentName+'-CTLAB-alpha-mask.png')}
-function downloadHT(){if(!currentImage){toast("Primero abrí una imagen");return}downloadCanvas($("#ht-canvas"),currentName+"-CTLAB.png")}
+async function downloadHT(){
+ if(!currentImage||!lastHT||!lastHT.width)return toast("Primero procesá una imagen");
+ try{
+  const dpi=Math.max(1,Number($('#ht-dpi')?.value??300));
+  const cmW=Math.max(1,Number($('#ht-width-cm')?.value??30));
+  const ratio=currentImage.naturalHeight/currentImage.naturalWidth;
+  const cmH=$('#ht-lock-ratio')?.checked?cmW*ratio:Math.max(1,Number($('#ht-height-cm')?.value??cmW*ratio));
+  let targetW=Math.max(1,Math.round(cmW/2.54*dpi));
+  let targetH=Math.max(1,Math.round(cmH/2.54*dpi));
+  const maxPixels=30000000,requested=targetW*targetH;
+  if(requested>maxPixels){const scale=Math.sqrt(maxPixels/requested);targetW=Math.round(targetW*scale);targetH=Math.round(targetH*scale);}
+  const exportCanvas=document.createElement('canvas');
+  exportCanvas.width=targetW;exportCanvas.height=targetH;
+  const ctx=exportCanvas.getContext('2d');
+  if(!ctx)throw new Error('No se pudo crear el lienzo final');
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.clearRect(0,0,targetW,targetH);
+  ctx.drawImage(lastHT,0,0,targetW,targetH);
+  const rawBlob=await new Promise(resolve=>exportCanvas.toBlob(resolve,'image/png'));
+  if(!rawBlob)throw new Error('El navegador no pudo generar el PNG');
+  const raw=new Uint8Array(await rawBlob.arrayBuffer());
+  // Insert standard PNG pHYs metadata: pixels per metre, unit = metre.
+  const crc32=bytes=>{let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let k=0;k<8;k++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}return (crc^0xffffffff)>>>0;};
+  const write32=(a,o,v)=>{a[o]=(v>>>24)&255;a[o+1]=(v>>>16)&255;a[o+2]=(v>>>8)&255;a[o+3]=v&255;};
+  const ppm=Math.round(dpi/0.0254),chunk=new Uint8Array(21);
+  write32(chunk,0,9);chunk.set([112,72,89,115],4);write32(chunk,8,ppm);write32(chunk,12,ppm);chunk[16]=1;write32(chunk,17,crc32(chunk.subarray(4,17)));
+  // PNG signature (8) + IHDR chunk (25) = offset 33.
+  const finalBytes=new Uint8Array(raw.length+chunk.length);
+  finalBytes.set(raw.subarray(0,33),0);finalBytes.set(chunk,33);finalBytes.set(raw.subarray(33),54);
+  const finalBlob=new Blob([finalBytes],{type:'image/png'});
+  const url=URL.createObjectURL(finalBlob),a=document.createElement('a');
+  a.href=url;a.download=currentName+'-CTLAB.png';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  const effectiveDpi=Math.min(targetW/(cmW/2.54),targetH/(cmH/2.54));
+  toast(`PNG exportado: ${targetW} × ${targetH} px · ${Math.round(effectiveDpi)} DPI · metadatos incluidos`);
+ }catch(err){console.error('CT LAB export error',err);toast('No se pudo exportar el PNG final. Probá reducir el tamaño o DPI.')}
+}
 async function saveCurrentToLibrary(){if(!currentImage)return toast("Primero abrí una imagen");const data=$("#ht-canvas").toDataURL("image/png");await addAsset({name:currentName+"-procesado.png",type:"image/png",data,created:Date.now()});updateStats();toast("Resultado guardado en biblioteca")}
 function renderDTFAssets(){getAssets().then(assets=>{const box=$("#dtf-assets");box.innerHTML="";assets.forEach(a=>{const label=document.createElement("label");label.className="row";label.style.fontSize="12px";label.innerHTML=`<input type="checkbox" data-id="${a.id}" checked style="accent-color:#c7ad7a"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHTML(a.name)}</span>`;box.append(label)});if(!assets.length)box.textContent="No hay diseños guardados. Importá archivos en Biblioteca."})}
 async function renderDTF(){const assets=await getAssets(),selected=[...document.querySelectorAll("#dtf-assets input:checked")].map(x=>+x.dataset.id),chosen=assets.filter(a=>selected.includes(a.id));const w=Math.max(5,+$("#dtf-w").value||30),h=Math.max(5,+$("#dtf-h").value||45),margin=Math.max(0,+$("#dtf-margin").value||0)*40,gap=Math.max(0,+$("#dtf-gap").value||0)*118.11,scale=118.11;const c=$("#dtf-canvas");c.width=Math.round(w*scale);c.height=Math.round(h*scale);const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);let x=margin,y=margin,rowH=0;for(const a of chosen){const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=a.data});const maxW=c.width-2*margin,maxH=c.height-2*margin;let iw=img.width,ih=img.height;const fit=Math.min(1,maxW/iw,maxH/ih);iw*=fit;ih*=fit;if(x+iw>c.width-margin){x=margin;y+=rowH+gap;rowH=0}if(y+ih>c.height-margin)break;ctx.drawImage(img,x,y,iw,ih);x+=iw+gap;rowH=Math.max(rowH,ih)}}

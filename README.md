@@ -84,3 +84,10 @@ Esta actualización amplía el módulo de semitonos con controles de trama y her
 - Incluye objetivo, tipo de prenda, DPI y medida final, instrucciones y lista de control de retorno.
 - No conecta con APIs ni sube imágenes automáticamente; el usuario controla qué comparte.
 - Esta función organiza el flujo de trabajo, no realiza por sí sola restauración IA, segmentación IA ni validación automática de calidad.
+
+
+## v3.3 — Exportación final de impresión
+- El botón Exportar PNG crea un lienzo final con las dimensiones físicas seleccionadas y remuestrea desde el resultado procesado.
+- Incorpora metadatos PNG pHYs para el DPI solicitado.
+- Informa dimensiones y DPI efectivos al finalizar.
+- Mantiene el procesamiento de fondo conectado a bordes de v3.2.
