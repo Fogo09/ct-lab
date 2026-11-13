@@ -50,7 +50,7 @@ async function updateStats(){$("#stat-assets").textContent=(await getAssets()).l
 function setupRange(id,out){$("#"+id).addEventListener("input",()=>{ $("#"+out).textContent=$("#"+id).value;renderHT()})}
 ["ht-cell","ht-contrast","ht-bright","ht-threshold"].forEach((id,i)=>setupRange(id,["v-cell","v-contrast","v-bright","v-threshold"][i]));
 ["ht-mode","ht-color","ht-transparent"].forEach(id=>$("#"+id).addEventListener("change",renderHT));
-function resetHT(){ $("#ht-mode").value="halftone";$("#ht-cell").value=8;$("#ht-contrast").value=35;$("#ht-bright").value=0;$("#ht-threshold").value=128;$("#ht-color").value="#111111";$("#ht-transparent").checked=true;["v-cell","v-contrast","v-bright","v-threshold"].forEach((x,i)=>$("#"+x).textContent=[8,35,0,128][i]);renderHT()}
+function resetHT(){ $("#ht-mode").value="halftone";$("#ht-cell").value=10;$("#ht-contrast").value=35;$("#ht-bright").value=0;$("#ht-threshold").value=128;$("#ht-color").value="#111111";$("#ht-transparent").checked=true;["v-cell","v-contrast","v-bright","v-threshold"].forEach((x,i)=>$("#"+x).textContent=[10,35,0,128][i]);renderHT()}
 function setHTMode(mode){htToolMode=mode;htPicking=false;const picker=$('#ht-picker');if(picker){picker.textContent='⌖ Elegir color en imagen';picker.classList.remove('primary')}$('#ht-remove-panel').style.display=(mode==='remove'||mode==='keyhalftone')?'block':'none';$('#ht-mono-panel').style.display=mode==='mono'?'block':'none';document.querySelectorAll('[data-ht-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.htMode===mode));$('#ht-ink-control').style.display=mode==='mono'?'none':'grid';renderHT()}
 function renderHT(){
  if(!currentImage)return;
@@ -74,6 +74,8 @@ function renderHT(){
   const lpi=Math.max(20,Math.min(120,+($('#ht-lpi')?.value||45))),angle=(+($('#ht-angle')?.value||0))*Math.PI/180,dotShape=$('#ht-dot-shape')?.value||'circle';
   const lpiCell=Math.max(3,Math.min(24,Math.round(dpi/lpi)));if($('#ht-lpi-info'))$('#ht-lpi-info').textContent=`Paso aproximado: ${lpiCell} px por celda a ${dpi} DPI · ${lpi} LPI`;
   const effectiveCell=Math.max(1,Math.round(lpiCell));
+  // Point-size control scales ink-dot radius independently of LPI cell spacing.
+  const pointScale=Math.max(0.35,Math.min(1.8,cell/8));
   const factor=(259*(contrast+255))/(255*(259-contrast));
   const key=hexRGB($('#ht-key-color')?.value||'#000000');
   // Read slider values without `||`: zero is a valid and intentional setting.
@@ -115,11 +117,21 @@ function renderHT(){
     // In combined mode, keep all subject tones; the background is removed by edge flood-fill,
     // not by deleting white pixels. RGB values are sampled and retained per halftone cell.
     if(mode!=='keyhalftone'&&transparent&&lum>247)continue;
-    const radius=(1-lum/255)*(step*.70),cx=x+step/2,cy=y+step/2;
+    const radius=Math.min(step*.94,(1-lum/255)*(step*.70)*pointScale),cx=x+step/2,cy=y+step/2;
     if(radius<.35)continue;
     const col=mode==='mono'?ink:[Math.round(rr),Math.round(gg),Math.round(bb)];
     const alpha=Math.round(255*Math.min(1,aa/n));
-    for(let yy=Math.max(0,Math.floor(cy-radius));yy<Math.min(c.height,Math.ceil(cy+radius));yy++)for(let xx=Math.max(0,Math.floor(cx-radius));xx<Math.min(c.width,Math.ceil(cx+radius));xx++){const dx=xx-cx,dy=yy-cy,rx=dx*Math.cos(angle)+dy*Math.sin(angle),ry=-dx*Math.sin(angle)+dy*Math.cos(angle);let inside=false;if(dotShape==='square')inside=Math.abs(rx)<=radius*.78&&Math.abs(ry)<=radius*.78;else if(dotShape==='ellipse')inside=(rx/(radius*.95))**2+(ry/(radius*.62))**2<=1;else if(dotShape==='line')inside=Math.abs(ry)<=Math.max(.6,radius*.22)&&Math.abs(rx)<=radius;else inside=rx*rx+ry*ry<=radius*radius;if(inside){const i=(yy*c.width+xx)*4;out.data[i]=col[0];out.data[i+1]=col[1];out.data[i+2]=col[2];out.data[i+3]=alpha}}
+    for(let yy=Math.max(0,Math.floor(cy-radius-1));yy<Math.min(c.height,Math.ceil(cy+radius+1));yy++)for(let xx=Math.max(0,Math.floor(cx-radius-1));xx<Math.min(c.width,Math.ceil(cx+radius+1));xx++){
+     const dx=xx-cx,dy=yy-cy,rx=dx*Math.cos(angle)+dy*Math.sin(angle),ry=-dx*Math.sin(angle)+dy*Math.cos(angle);
+     let edge=0;
+     if(dotShape==='square')edge=Math.min(radius*.78-Math.abs(rx),radius*.78-Math.abs(ry));
+     else if(dotShape==='ellipse')edge=(1-Math.sqrt((rx/(radius*.95))**2+(ry/(radius*.62))**2))*Math.min(radius*.95,radius*.62);
+     else if(dotShape==='line')edge=Math.min(radius-Math.abs(rx),Math.max(.6,radius*.22)-Math.abs(ry));
+     else edge=radius-Math.hypot(rx,ry);
+     // Sub-pixel edge coverage smooths dot boundaries while preserving true alpha.
+     const coverage=Math.max(0,Math.min(1,edge+.5));
+     if(coverage>0){const i=(yy*c.width+xx)*4;out.data[i]=col[0];out.data[i+1]=col[1];out.data[i+2]=col[2];out.data[i+3]=Math.round(alpha*coverage)}
+    }
    }
   }else{
    for(let i=0;i<src.data.length;i+=4){let lum=.299*src.data[i]+.587*src.data[i+1]+.114*src.data[i+2];lum=Math.max(0,Math.min(255,factor*(lum-128)+128+bright*2.55));let r=lum,g=lum,b=lum,a=src.data[i+3];if(mode==='threshold'){const v=lum>=threshold?255:0;if(transparent&&v===255)a=0;r=g=b=v}else if(mode==='posterize'){const v=Math.round(lum/64)*64;r=g=b=v}else if(mode==='original'){r=src.data[i];g=src.data[i+1];b=src.data[i+2]}out.data[i]=r;out.data[i+1]=g;out.data[i+2]=b;out.data[i+3]=a}

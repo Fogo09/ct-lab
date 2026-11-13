@@ -110,7 +110,7 @@ textarea{width:100%;background:#11110f;color:var(--ink);border:1px solid var(--l
         <label class="sub"><input id="ht-garment-knockout" type="checkbox"> Fusionar con prenda negra (quitar negros de la estampa)</label>
         <div class="control"><label>Tolerancia de negro <b id="ht-black-v">32</b></label><input id="ht-black-tol" type="range" min="0" max="120" value="32"></div>
       </div>
-      <div class="panel" style="padding:12px"><b>TRAMA DE IMPRESIÓN AVANZADA</b><p class="sub">Controlá la frecuencia y geometría de los puntos. El valor LPI es una referencia de trama; verificá el resultado con tu proveedor DTF.</p>
+      <div class="panel" style="padding:12px"><b>TRAMA DE IMPRESIÓN AVANZADA</b><p class="sub">El LPI define la separación de celdas. El tamaño de punto controla cuánto ocupa cada punto dentro de su celda. Verificá la trama con tu proveedor DTF.</p>
         <div class="row"><div class="control"><label>Frecuencia (LPI)</label><input id="ht-lpi" type="number" min="20" max="120" value="45"></div><div class="control"><label>Ángulo (°)</label><input id="ht-angle" type="number" min="0" max="180" value="45"></div></div>
         <div class="control"><label>Forma del punto</label><select id="ht-dot-shape"><option value="circle">Circular</option><option value="ellipse">Elíptico</option><option value="square">Cuadrado</option><option value="line">Línea</option></select></div>
         <div class="sub" id="ht-lpi-info">Paso de trama calculado según DPI.</div>
@@ -120,7 +120,7 @@ textarea{width:100%;background:#11110f;color:var(--ink);border:1px solid var(--l
         <button class="btn" type="button" onclick="downloadUnderbase()">Exportar base blanca PNG</button>
         <button class="btn" type="button" onclick="downloadAlphaMask()">Exportar máscara de transparencia</button>
       </div>
-      <div class="control"><label>Frecuencia de puntos <b id="v-cell">8</b> px</label><input id="ht-cell" type="range" min="3" max="24" value="8"></div>
+      <div class="control"><label>Tamaño de punto <b id="v-cell">10</b> px</label><input id="ht-cell" type="range" min="3" max="24" value="10"></div>
       <div class="control"><label>Contraste <b id="v-contrast">35</b></label><input id="ht-contrast" type="range" min="-100" max="100" value="35"></div>
       <div class="control"><label>Brillo <b id="v-bright">0</b></label><input id="ht-bright" type="range" min="-100" max="100" value="0"></div>
       <div class="control"><label>Umbral <b id="v-threshold">128</b></label><input id="ht-threshold" type="range" min="0" max="255" value="128"></div>

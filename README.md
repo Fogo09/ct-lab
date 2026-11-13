@@ -86,8 +86,14 @@ Esta actualización amplía el módulo de semitonos con controles de trama y her
 - Esta función organiza el flujo de trabajo, no realiza por sí sola restauración IA, segmentación IA ni validación automática de calidad.
 
 
-## v3.3 — Exportación final de impresión
+## v3.4 — Exportación final de impresión
 - El botón Exportar PNG crea un lienzo final con las dimensiones físicas seleccionadas y remuestrea desde el resultado procesado.
 - Incorpora metadatos PNG pHYs para el DPI solicitado.
 - Informa dimensiones y DPI efectivos al finalizar.
 - Mantiene el procesamiento de fondo conectado a bordes de v3.2.
+
+
+## v3.4 — Refinamiento de semitonos RGB
+- El control de tamaño de punto modifica el radio de los puntos de forma independiente del LPI.
+- Bordes de puntos con cobertura subpíxel para reducir bordes dentados.
+- Se mantiene el muestreo RGB por celda y el canal alfa.
